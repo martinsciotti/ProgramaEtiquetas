@@ -547,15 +547,28 @@ tr:hover td { background: #f8fafc; }
       <div class="sub">Farmacia Central SMD</div>
     </div>
 
-    <!-- Botón principal: Operador (un click) -->
-    <button class="login-btn" onclick="loginComoOperador()"
+    <!-- Botón principal: Operador (pide PIN) -->
+    <button class="login-btn" onclick="toggleOperadorPanel()" id="btn-operador-toggle"
       style="font-size:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:12px;border-radius:10px;">
       <span style="font-size:22px;line-height:1;">🖨</span>
       <div style="text-align:left;">
         <div style="font-weight:800;font-size:15px;">Soy Operador</div>
-        <div style="font-size:11px;font-weight:400;opacity:.8;margin-top:1px;">Acceso directo · Solo impresión</div>
+        <div style="font-size:11px;font-weight:400;opacity:.8;margin-top:1px;">Solo impresión · Requiere PIN</div>
       </div>
     </button>
+
+    <!-- Panel de PIN operador (oculto por defecto) -->
+    <div id="operador-panel" style="display:none;margin-bottom:10px;">
+      <div class="login-field">
+        <label>PIN de operador</label>
+        <input type="password" id="login-pin" placeholder="PIN" autocomplete="off" inputmode="numeric"
+          onkeydown="if(event.key==='Enter')doLoginOperador()"
+          style="font-size:15px;">
+      </div>
+      <button class="login-btn" onclick="doLoginOperador()" style="margin-top:4px;border-radius:10px;">
+        Ingresar como Operador →
+      </button>
+    </div>
 
     <!-- Divisor -->
     <div style="display:flex;align-items:center;gap:10px;margin:4px 0 10px;">
@@ -672,7 +685,6 @@ tr:hover td { background: #f8fafc; }
 
 // ── Autenticación real contra Firebase Auth ──
 const OPERADOR_EMAIL = 'operador@farmacia.local';
-const OPERADOR_PASS  = 'farmacia';
 const UID_ADMIN    = 'G8AUPLFBNTbteZO0tHfzzEd17gh1';
 const UID_OPERADOR = 'eGw5bYWHUbOwT8jGRrIxlCi1Uz52';
 
@@ -684,15 +696,29 @@ let _fbReadyPromise = new Promise(resolve => {
 });
 async function waitFb() { if (!_fbReady) await _fbReadyPromise; return window.fb; }
 
-async function loginComoOperador() {
+// El PIN de operador ya NO vive en el código — se tipea y se manda directo a
+// Firebase Auth para validar. Así nadie puede verlo mirando el código fuente (F12).
+function toggleOperadorPanel() {
+  const panel = document.getElementById('operador-panel');
+  const btn   = document.getElementById('btn-operador-toggle');
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    setTimeout(() => document.getElementById('login-pin')?.focus(), 50);
+  }
+}
+
+async function doLoginOperador() {
+  const pin = document.getElementById('login-pin').value;
   const errEl = document.getElementById('login-err');
   if (errEl) errEl.textContent = '';
+  if (!pin) { if (errEl) errEl.textContent = 'Ingresá el PIN de operador.'; return; }
   try {
     const fb = await waitFb();
-    await fb.signInWithEmailAndPassword(fb.auth, OPERADOR_EMAIL, OPERADOR_PASS);
+    await fb.signInWithEmailAndPassword(fb.auth, OPERADOR_EMAIL, pin);
   } catch(e) {
     console.error(e);
-    if (errEl) errEl.textContent = 'No se pudo ingresar como operador. Verificá tu conexión a internet.';
+    if (errEl) errEl.textContent = 'PIN incorrecto.';
   }
 }
 
