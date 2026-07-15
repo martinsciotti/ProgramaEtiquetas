@@ -5799,6 +5799,8 @@ function monitorearTrabajoRemoto(trabajoId, btn, btnOriginal) {
         btn.innerHTML = '<span style="font-size:18px;">⚠</span> Error en la PC del trabajo';
         toast('⚠ La PC del trabajo reportó un error al imprimir: ' + (data.error || 'desconocido'), 'error', 8000);
         btn.disabled = false; btn.style.opacity = '';
+      } else if (data?.estado === 'en_proceso') {
+        btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">⟳</span> Imprimiendo en el trabajo...';
       } else if (intentos >= maxIntentos) {
         clearInterval(poll);
         btn.innerHTML = '<span style="font-size:18px;">⏳</span> Aún pendiente — revisá el Historial';
