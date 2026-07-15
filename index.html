@@ -425,6 +425,112 @@ tr:hover td { background: #f8fafc; }
   font-family: var(--font); color: var(--text);
 }
 #forma-dropdown div:hover { background: var(--teal-lt); color: var(--teal-dk); }
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE MOBILE — solo aplica ≤768px, no toca desktop
+   ══════════════════════════════════════════════ */
+.imp-list-toggle-btn { display: none; }
+
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+  .app, .body { min-width: 0; overflow-x: hidden; }
+
+  /* ── Header institucional: más compacto, permite wrap ── */
+  .header { height: auto; min-height: 56px; padding: 8px 12px; flex-wrap: wrap; row-gap: 6px; }
+  .hdr-title { font-size: 13px; }
+  .hdr-sub { font-size: 9px; }
+  .hdr-right { gap: 8px; flex-wrap: wrap; }
+  .hdr-badge { padding: 3px 7px; font-size: 10px; }
+  .hdr-badge strong { font-size: 11px; }
+  #hdr-save-status { display: none; } /* poco espacio, no crítico en mobile */
+
+  /* ── Tabs superiores: scroll horizontal en vez de apretarse ── */
+  .rp-topbar { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 8px; scrollbar-width: thin; }
+  .tab { padding: 10px 11px; font-size: 11px; flex-shrink: 0; }
+
+  /* ── Panel Imprimir: lista colapsable + form apilado ──
+     El header (buscador + botón + filtros) siempre visible; solo #mag-list colapsa. */
+  .imp-layout { flex-direction: column; overflow-y: auto !important; overflow-x: hidden; height: 100%; min-height: 0; }
+  .imp-list-panel {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow: visible;
+  }
+  .imp-list-panel .mag-list {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 6px !important;
+    transition: max-height .2s ease;
+  }
+  .imp-list-panel.imp-list-open .mag-list {
+    max-height: 55vh;
+    overflow-y: auto;
+    padding: 4px 6px !important;
+  }
+  .imp-list-toggle-btn {
+    display: inline-block;
+    font-size: 11px; font-weight: 600; color: var(--teal);
+    background: var(--teal-lt); border: 1px solid #b0dce0; border-radius: 6px;
+    padding: 5px 10px; cursor: pointer; font-family: var(--font);
+  }
+  .imp-right-panel { overflow: visible !important; }
+  .imp-panel-scroll { overflow-y: visible !important; padding: 12px !important; }
+  .imp-form-grid { grid-template-columns: 1fr !important; max-width: 100% !important; }
+  .imp-form-grid > * { min-width: 0; }
+  .imp-preview-col { position: static !important; }
+  .preview-paper-area { padding: 16px 8px !important; }
+
+  /* ── Formulario Nuevo/Editar con preview ── */
+  .form-with-preview { grid-template-columns: 1fr !important; max-width: 100% !important; }
+  .form-with-preview > * { min-width: 0; }
+  .form-preview-panel { max-height: none; position: static !important; }
+  .edit-content-row { flex-direction: column !important; overflow-y: auto !important; }
+  .edit-form-col { overflow: visible !important; min-width: 0; }
+  .edit-preview-col { width: 100% !important; border-left: none !important; border-top: 1px solid var(--border); }
+  .form-card { padding: 14px 14px; max-width: 100%; }
+  .vol-fijo-row { flex-wrap: wrap; row-gap: 6px; }
+
+  /* ── Configuración: grid apilado ── */
+  .cfg-main-grid { grid-template-columns: 1fr !important; max-width: 100% !important; }
+  .cfg-main-grid > * { min-width: 0; }
+
+  /* ── Grids genéricos de formularios: 1 columna en mobile ── */
+  .grid2, .grid3, .lote-grid { grid-template-columns: 1fr !important; }
+
+  /* Sliders y filas de configuración (Config/Perfiles/Troquelados/Rótulo) usan grids
+     inline con columnas fijas en px (ej. "150px 1fr 70px") — se apilan en mobile para
+     que la etiqueta, el control y el valor no se corten fuera de pantalla. */
+  #cfg-tab-content [style*="grid-template-columns"],
+  #troq-editor [style*="grid-template-columns"],
+  #perfil-editor [style*="grid-template-columns"],
+  #edit-sub-content [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    row-gap: 4px !important;
+  }
+  #cfg-tab-content [style*="grid-template-columns"] > span:last-child,
+  #troq-editor [style*="grid-template-columns"] > span:last-child,
+  #perfil-editor [style*="grid-template-columns"] > span:last-child,
+  #edit-sub-content [style*="grid-template-columns"] > span:last-child {
+    text-align: left !important;
+  }
+
+  /* ── Tablas: scroll horizontal contenido, nunca desbordan la pantalla ── */
+  .hist-wrap, table { max-width: 100%; }
+  .hist-wrap > div { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { font-size: 10.5px; }
+  th, td { padding: 6px 8px; white-space: nowrap; }
+
+  /* ── Modales: ocupan casi todo el ancho, sin overflow ── */
+  .modal { width: 92vw; padding: 16px 18px; }
+
+  /* ── Botón grande de imprimir: un poco más chico para no ocupar tanto ── */
+  .btn-print-big { font-size: 13px !important; padding: 12px !important; }
+
+  /* ── Zoom de etiqueta: que el contenido ampliado no desborde la pantalla ── */
+  .zoom-box { padding: 20px 16px; max-width: 94vw; }
+}
 </style>
 </head>
 <body>
@@ -1330,6 +1436,13 @@ function getSzPxAll() {
   return result;
 }
 
+// Ancho máximo disponible para el preview de etiqueta, ajustado en mobile para
+// que no desborde la pantalla (376px es el techo usado en desktop).
+function previewMaxW() {
+  if (window.innerWidth <= 480) return Math.max(160, window.innerWidth - 60);
+  return 376;
+}
+
 const DEMO = [
   // ── MAGISTRALES ──────────────────────────────────────────────────────────
   { id:1,  nombre:'Ácido Ursodesoxicólico 25mg/mL', droga:'Ácido Ursodesoxicólico', concentracion:'25 mg/mL',   forma:'Suspensión oral', cantidad:'50', instruccion:'Conservar en heladera · Agitar antes de usar',             estabilidad:'28 días', tamano:'L', tipo:'Magistral', sanatorio:'Sanatorio Mater Dei', habilitado:true },
@@ -1762,15 +1875,27 @@ function selectM(m) {
   if (prevSel) prevSel.classList.remove('sel');
   const newSel = document.querySelector(`#mag-list .mi[data-id="${m.id}"]`);
   if (newSel) newSel.classList.add('sel');
+  // En mobile, al elegir un preparado se cierra la lista y se pasa al formulario
+  if (window.innerWidth <= 768) {
+    const panel = document.getElementById('imp-list-panel');
+    const btn   = document.getElementById('imp-list-toggle-btn');
+    if (panel) panel.classList.remove('imp-list-open');
+    if (btn) btn.textContent = 'Cambiar preparado ▾';
+  }
   // Solo actualizar el panel derecho de Imprimir
   renderImpPanel();
 }
 
 function buildListPanel() {
   return `
-  <div style="width:270px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);overflow:hidden;">
+  <div id="imp-list-panel" class="imp-list-panel" style="width:270px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);overflow:hidden;">
     <div style="padding:10px 10px 6px;border-bottom:1px solid var(--border);flex-shrink:0;">
-      <div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">Preparados</div>
+      <div class="imp-list-header-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;">Preparados</div>
+        <button type="button" class="imp-list-toggle-btn" onclick="toggleImpListMobile()" id="imp-list-toggle-btn">
+          Cambiar preparado ▾
+        </button>
+      </div>
       <input type="text" class="search" id="srch" placeholder="Buscar..." oninput="filterListDebounced()" value="${document.getElementById('srch')?.value||''}">
       <div class="tipo-row" style="margin-top:6px;">
         <span class="tc ${tipoFlt==='all'?'on':''}"         data-t="all"         onclick="setTipo(this)">Todos</span>
@@ -1781,6 +1906,16 @@ function buildListPanel() {
     </div>
     <div class="mag-list" id="mag-list" style="flex:1;overflow-y:auto;padding:4px 6px;"></div>
   </div>`;
+}
+
+// En mobile, la lista arranca colapsada (se ve el formulario primero) y este botón
+// la despliega/oculta. En desktop este botón no se muestra (CSS) y no tiene efecto.
+function toggleImpListMobile() {
+  const panel = document.getElementById('imp-list-panel');
+  const btn   = document.getElementById('imp-list-toggle-btn');
+  if (!panel) return;
+  const open = panel.classList.toggle('imp-list-open');
+  if (btn) btn.textContent = open ? 'Ocultar lista ▴' : 'Cambiar preparado ▾';
 }
 
 function toggleArFlt() {
@@ -1857,9 +1992,9 @@ function renderEdit() {
     </div>
 
     <!-- CONTENIDO: sub-tabs + formulario + preview -->
-    <div style="flex:1;overflow:hidden;display:flex;flex-direction:row;min-height:0;">
+    <div class="edit-content-row" style="flex:1;overflow:hidden;display:flex;flex-direction:row;min-height:0;">
       ${m && !esInactivo ? `
-      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
+      <div class="edit-form-col" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
         <!-- SUB-TABS -->
         <div style="display:flex;border-bottom:2px solid var(--border);background:var(--surface);flex-shrink:0;">
           <button id="edit-sub-datos" onclick="setEditSubTab('datos')"
@@ -1880,7 +2015,7 @@ function renderEdit() {
         <div id="edit-sub-content" style="flex:1;overflow-y:auto;padding:20px 24px;"></div>
       </div>
       <!-- PREVIEW PANEL STICKY -->
-      <div style="width:420px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;">
+      <div class="edit-preview-col" style="width:420px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;">
         ${_buildFormPreviewPanel()}
       </div>
       ` : m && esInactivo ? `
@@ -2187,13 +2322,13 @@ function renderCfg() {
 
   b.innerHTML = `
   <div style="padding:20px 24px;min-height:100%;">
-  <div style="display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start;max-width:1060px;">
+  <div class="cfg-main-grid" style="display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start;max-width:1060px;">
 
   <!-- COLUMNA IZQUIERDA -->
-  <div style="display:flex;flex-direction:column;gap:0;">
+  <div style="display:flex;flex-direction:column;gap:0;min-width:0;">
 
     <!-- TABS HORIZONTALES -->
-    <div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;flex-shrink:0;">
+    <div id="cfg-tabs-row" style="display:flex;border-bottom:2px solid var(--border);margin-bottom:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;flex-shrink:0;min-width:0;">
       <style>#cfg-tabs-row::-webkit-scrollbar{display:none}</style>
       ${[
         ['cal',  '⊹ Calibración'],
@@ -2748,7 +2883,7 @@ function previewCfg() {
   const szInfo = { S:{label:'S · 48×20mm',w:48,h:20}, M:{label:'M · 70×25.4mm',w:70,h:25.4}, L:{label:'L · 99×38mm',w:99,h:38}, XL:{label:'XL · 105×57mm',w:105,h:57} };
   const info = szInfo[sz] || szInfo.M;
 
-  const maxW = 376, maxH = 220;
+  const maxW = previewMaxW(), maxH = 220;
   const pxPerMm = 3.78;
   const naturalW = info.w * pxPerMm;
   const naturalH = info.h * pxPerMm;
@@ -4173,7 +4308,7 @@ function previewRotulo() {
   const sz = m.tamano;
   const szPx = getSzPxAll();
   const { w, h } = szPx[sz] || szPx.M;
-  const maxW = 376, maxH = 220;
+  const maxW = previewMaxW(), maxH = 220;
   const sc = Math.min(maxW/w, maxH/h, 3);
   const mW = Math.round(w*sc), mH = Math.round(h*sc);
   const d = {
@@ -5226,9 +5361,9 @@ function imprimirHistorialReporte() {
 function renderImp() {
   const b = document.getElementById('rp-body');
   // Always build list + right panel container
-  b.innerHTML = `<div style="display:flex;height:100%;gap:0;overflow:hidden;">
+  b.innerHTML = `<div class="imp-layout" style="display:flex;height:100%;gap:0;overflow:hidden;">
     ${buildListPanel()}
-    <div id="imp-right-panel" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0;"></div>
+    <div id="imp-right-panel" class="imp-right-panel" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0;"></div>
   </div>`;
   attachListEvents();
   renderImpPanel();
@@ -5266,8 +5401,8 @@ function renderImpPanel() {
 
   panel.innerHTML = `
     <!-- ÁREA CENTRAL: form + preview en grid -->
-    <div style="flex:1;overflow-y:auto;min-width:0;background:var(--bg);padding:20px 24px;">
-      <div style="display:grid;grid-template-columns:1fr 420px;gap:20px;max-width:1000px;margin:0 auto;align-items:start;">
+    <div class="imp-panel-scroll" style="flex:1;overflow-y:auto;min-width:0;background:var(--bg);padding:20px 24px;">
+      <div class="imp-form-grid" style="display:grid;grid-template-columns:1fr 420px;gap:20px;max-width:1000px;margin:0 auto;align-items:start;">
 
         <!-- COLUMNA IZQUIERDA: formulario -->
         <div>
@@ -5275,7 +5410,7 @@ function renderImpPanel() {
           <div style="background:var(--surface);border:1px solid ${sel.altoRiesgo?'#c0392b':'var(--border)'};border-radius:10px;overflow:hidden;margin-bottom:16px;border-left:4px solid ${sel.altoRiesgo?'#c0392b':'var(--teal)'};">
             ${sel.altoRiesgo ? `<div style="background:#c0392b;color:#fff;font-size:11px;font-weight:800;padding:5px 18px;letter-spacing:.06em;text-transform:uppercase;">⚠ Medicamento de Alto Riesgo</div>` : ''}
             <div style="padding:14px 18px;">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+              <div class="imp-cabecera-row" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
                 <div style="flex:1;min-width:0;">
                   <div style="font-size:16px;font-weight:800;color:var(--text);line-height:1.2;margin-bottom:4px;">${esc(sel.nombre)}</div>
                   <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">${esc(sel.droga)}${sel.concentracion?' · '+esc(sel.concentracion):''}${sel.forma?' · '+esc(sel.forma):''}${sel.cantidad?' x '+sel.cantidad+' '+(sel.unidad||'mL'):''}</div>
@@ -5321,7 +5456,7 @@ function renderImpPanel() {
             <span style="width:3px;height:11px;background:var(--teal);border-radius:2px;display:inline-block;"></span> Datos del lote
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="grid2" style="margin-bottom:12px;">
               <div class="fg" style="margin:0;"><label>Número de lote</label><input type="text" id="f-lote" placeholder="Ej: L2024-01" value="${loadLastLoteVenc(sel.id)?.lote || localStorage.getItem('farmacia-last-lote')||''}" oninput="updPrint()"></div>
               <div class="fg" style="margin:0;"><label>Fecha de elaboración</label><input type="date" id="f-elab" style="font-size:13px;" value="${fechaHoy()}" oninput="calcVencImp()"></div>
             </div>
@@ -5393,7 +5528,7 @@ function renderImpPanel() {
         </div>
 
         <!-- COLUMNA DERECHA: preview como cuadro -->
-        <div style="position:sticky;top:0;">
+        <div class="imp-preview-col" style="position:sticky;top:0;">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);">
             <!-- Header -->
             <div style="background:var(--navy);color:#fff;padding:10px 14px;">
@@ -5402,7 +5537,7 @@ function renderImpPanel() {
               <div style="font-size:10px;opacity:.5;margin-top:1px;">${sz.label} · ${sz.cols*sz.rows} etiq/hoja</div>
             </div>
             <!-- Área papel -->
-            <div style="background:#c8cdd2;padding:28px 20px;display:flex;align-items:center;justify-content:center;min-height:200px;">
+            <div class="preview-paper-area" style="background:#c8cdd2;padding:28px 20px;display:flex;align-items:center;justify-content:center;min-height:200px;">
               <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
                 <div id="imp-preview-wrap" style="box-shadow:0 4px 20px rgba(0,0,0,.28);"></div>
                 <div style="font-size:10px;color:#555;background:rgba(255,255,255,.55);padding:2px 8px;border-radius:3px;">${sz.w} × ${sz.h} mm</div>
@@ -5418,13 +5553,14 @@ function renderImpPanel() {
           <!-- BOTÓN IMPRIMIR -->
           <button class="btn-print-big" id="btn-do-print" onclick="doImprimir()"
             style="width:100%;margin-top:12px;font-size:15px;padding:15px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:10px;">
-            <span style="font-size:22px;">🖨</span>
+            <span style="font-size:22px;">${esMobile() ? '📡' : '🖨'}</span>
             <div style="text-align:left;">
-              <div style="font-weight:800;">Generar PDF y descargar</div>
+              <div style="font-weight:800;">${esMobile() ? 'Enviar a la impresora del trabajo' : 'Generar PDF y descargar'}</div>
               <div style="font-size:11px;font-weight:400;opacity:.8;margin-top:1px;" id="btn-print-sub">Seleccioná la cantidad</div>
             </div>
           </button>
         </div>
+    ${esMobile() ? `<div style="margin-top:8px;font-size:10.5px;color:var(--text3);text-align:center;">📡 Modo remoto: se manda a la cola y lo imprime la PC del trabajo (podés ver el estado abajo del botón)</div>` : ''}
 
       </div>
     </div>
@@ -5498,7 +5634,7 @@ function updPrint() {
   if (!wrap) return;
   const szPx = getSzPxAll();
   const {w, h} = szPx[sel.tamano] || szPx.M;
-  const maxW = 376, maxH = 220;
+  const maxW = previewMaxW(), maxH = 220;
   const sc = Math.min(maxW/w, maxH/h, 3);
   const mW = Math.round(w*sc), mH = Math.round(h*sc);
   const arCb2 = document.getElementById('f-print-ar');
@@ -5555,9 +5691,129 @@ function pdfSpaceEvenly(doc, lineas, zoneTop, zoneH, txtX, maxW, jsPDFAlign, tru
   });
 }
 
+// Detecta "modo celular" por ancho de pantalla (mismo criterio que el CSS responsive: ≤768px)
+function esMobile() {
+  return window.innerWidth <= 768;
+}
+
 function doImprimir() {
   if (!sel) return;
+  if (esMobile()) {
+    enviarAColaRemota();
+  } else {
+    generarPdfLocal();
+  }
+}
 
+// Arma el payload con los mismos datos que se usan para el PDF local, y lo sube
+// a la colección "cola_impresion" en Firestore. El agente en la PC del trabajo
+// lo toma, regenera el PDF ahí mismo y lo manda a la impresora física.
+async function enviarAColaRemota() {
+  if (!sel) return;
+  const sz       = SZ[sel.tamano] || loadTroquelados()[0];
+  const perSheet = sz.cols * sz.rows;
+  const qty      = Math.max(1, parseInt(document.getElementById('f-qty').value) || 1);
+  const sheets   = Math.ceil(qty / perSheet);
+  const lotVal   = document.getElementById('f-lote').value.trim();
+  const recVal   = document.getElementById('f-recetario')?.value.trim() || '';
+  const cajaMadreVal = document.getElementById('f-caja-madre')?.value || '';
+  const vncVal   = document.getElementById('f-venc').value.trim();
+  const pacVal   = document.getElementById('f-pac').value.trim();
+  const volVarVal = document.getElementById('f-vol-var')?.value.trim() || '';
+  const volVarUnidadImp = document.getElementById('f-vol-var-unidad')?.value || sel.unidad || 'mL';
+  const cntVal   = sel.cantidad || volVarVal;
+  const unidadEfectiva = sel.cantidad ? (sel.unidad||'mL') : volVarUnidadImp;
+  const arToggle = document.getElementById('f-print-ar');
+  const printAltoRiesgo = sel.altoRiesgo && (arToggle ? arToggle.checked : true);
+  const fechaElab = document.getElementById('f-elab')?.value || '';
+
+  if (lotVal) localStorage.setItem('farmacia-last-lote', lotVal);
+  if (vncVal) localStorage.setItem('farmacia-last-venc', vncVal);
+  if (sel?.id && lotVal) saveLastLoteVenc(sel.id, lotVal, vncVal);
+
+  const btn = document.getElementById('btn-do-print');
+  const btnOriginal = btn.innerHTML;
+  btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;margin-right:6px;">⟳</span> Enviando a la impresora del trabajo...';
+  btn.disabled = true;
+  btn.style.opacity = '0.8';
+
+  try {
+    const fb = await waitFb();
+    const trabajoId = Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
+    const payload = {
+      id: trabajoId,
+      estado: 'pendiente',
+      creadoTs: Date.now(),
+      creadoPor: currentUser?.usuario || 'desconocido',
+      // Datos del preparado — el agente reconstruye la etiqueta con esto, igual que el preview
+      magId: sel.id, nombre: sel.nombre, tipo: sel.tipo, tamano: sel.tamano,
+      droga: sel.droga, concentracion: sel.concentracion || '', forma: sel.forma || '',
+      instruccion: sel.instruccion || '', instruccionData: sel.instruccionData || '',
+      sanatorio: sel.sanatorio || '', altoRiesgo: !!printAltoRiesgo,
+      unidad: unidadEfectiva, cantidad: cntVal,
+      // Datos del lote tipeados en este momento
+      lote: lotVal, vencimiento: vncVal, recetario: recVal,
+      cajaMadre: cajaMadreVal, criterioVenc: sel.criterioVenc || 'manual',
+      fechaElaboracion: fechaElab, paciente: pacVal,
+      qty, sheets, perSheet,
+    };
+    await fb.setDoc(fb.doc(fb.db, 'cola_impresion', trabajoId), payload);
+
+    // Registrar también en el historial normal, como toda impresión
+    const now = new Date();
+    const fechaHist = now.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' })
+                    + ' ' + now.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+    const cajaMadreFmt = cajaMadreVal ? new Date(cajaMadreVal+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+    await addHist({ fecha: fechaHist, magId: sel.id, nombre: sel.nombre, tipo: sel.tipo, droga: sel.droga, concentracion: sel.concentracion || '', volumen: cntVal ? cntVal+' '+unidadEfectiva : '', lote: lotVal, venc: vncVal, cajaMadre: cajaMadreFmt, criterio: criterioVencAbbr(sel.criterioVenc), recetario: recVal || '', qty, hojas: sheets, paciente: pacVal, remoto: true });
+
+    toast(`✓ Enviado a la cola de impresión del trabajo · ${qty} etiqueta${qty!==1?'s':''}`, 'success', 5000);
+    btn.innerHTML = '<span style="font-size:18px;">✓</span> Enviado — seguí el estado abajo';
+    monitorearTrabajoRemoto(trabajoId, btn, btnOriginal);
+  } catch(e) {
+    console.error(e);
+    toast('⚠ No se pudo enviar a la cola remota: ' + e.message, 'error', 7000);
+    btn.innerHTML = btnOriginal;
+    btn.disabled = false;
+    btn.style.opacity = '';
+  }
+}
+
+// Sondea el estado del trabajo cada 3s durante hasta 2 minutos, y actualiza el botón
+// para que el operador vea si ya se imprimió sin tener que hacer nada más.
+function monitorearTrabajoRemoto(trabajoId, btn, btnOriginal) {
+  let intentos = 0;
+  const maxIntentos = 40; // ~2 minutos a 3s cada uno
+  const poll = setInterval(async () => {
+    intentos++;
+    try {
+      const fb = await waitFb();
+      const snap = await fb.getDoc(fb.doc(fb.db, 'cola_impresion', trabajoId));
+      const data = snap.exists() ? snap.data() : null;
+      if (data?.estado === 'impreso') {
+        clearInterval(poll);
+        btn.innerHTML = '<span style="font-size:18px;">🖨✓</span> Impreso en el trabajo';
+        toast('✓ La impresora del trabajo confirmó la impresión', 'success', 5000);
+        setTimeout(() => { btn.innerHTML = btnOriginal; btn.disabled = false; btn.style.opacity = ''; }, 4000);
+      } else if (data?.estado === 'error') {
+        clearInterval(poll);
+        btn.innerHTML = '<span style="font-size:18px;">⚠</span> Error en la PC del trabajo';
+        toast('⚠ La PC del trabajo reportó un error al imprimir: ' + (data.error || 'desconocido'), 'error', 8000);
+        btn.disabled = false; btn.style.opacity = '';
+      } else if (intentos >= maxIntentos) {
+        clearInterval(poll);
+        btn.innerHTML = '<span style="font-size:18px;">⏳</span> Aún pendiente — revisá el Historial';
+        btn.disabled = false; btn.style.opacity = '';
+      }
+    } catch(e) {
+      console.error('Error consultando estado del trabajo remoto:', e);
+    }
+  }, 3000);
+}
+
+// Generación de PDF local (comportamiento original de desktop, sin cambios) —
+// descarga el archivo directamente en el navegador de la PC.
+function generarPdfLocal() {
+  if (!sel) return;
   const sz       = SZ[sel.tamano] || loadTroquelados()[0];
   const perSheet = sz.cols * sz.rows;
   const qty      = Math.max(1, parseInt(document.getElementById('f-qty').value) || 1);
@@ -5863,7 +6119,7 @@ function _buildFormPreviewPanel() {
       <div style="font-size:12px;font-weight:700;" id="fpp-nombre">—</div>
       <div style="font-size:10px;opacity:.5;margin-top:1px;" id="fpp-tamano">—</div>
     </div>
-    <div style="background:#c8cdd2;padding:28px 20px;display:flex;align-items:center;justify-content:center;flex:1;min-height:200px;" id="fpp-area">
+    <div class="preview-paper-area" style="background:#c8cdd2;padding:28px 20px;display:flex;align-items:center;justify-content:center;flex:1;min-height:200px;" id="fpp-area">
       <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
         <div id="form-lp-wrap" style="box-shadow:0 4px 20px rgba(0,0,0,.28);"></div>
         <div style="font-size:10px;color:#555;background:rgba(255,255,255,.55);padding:2px 8px;border-radius:3px;" id="fpp-dims">—</div>
@@ -5934,7 +6190,7 @@ function _renderFormInto(container, data) {
       <label>Volumen
         <span style="font-size:9px;color:var(--text3);font-weight:400;margin-left:4px;">(dejar vacío si es variable — se ingresará al imprimir)</span>
       </label>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div class="vol-fijo-row" style="display:flex;gap:8px;align-items:center;">
         <input type="text" id="fn-cantidad" value="${esc(v.cantidad)}"
           placeholder="Ej: 100"
           style="width:140px;font-size:16px;font-weight:600;"
@@ -6156,7 +6412,7 @@ function _doUpdateFormPreview() {
   const d = getFormData();
   const szPx = getSzPxAll();
   const { w, h } = szPx[d.tamano] || szPx.M;
-  const maxW = 376, maxH = 220;
+  const maxW = previewMaxW(), maxH = 220;
   const sc = Math.min(maxW / w, maxH / h, 3);
   const mW = Math.round(w * sc), mH = Math.round(h * sc);
 
