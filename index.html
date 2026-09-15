@@ -13,7 +13,7 @@
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc,
-    updateDoc, deleteDoc, query, orderBy, limit
+    updateDoc, deleteDoc, query, where, orderBy, limit
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -33,7 +33,7 @@
   window.fb = {
     auth, db,
     signInWithEmailAndPassword, onAuthStateChanged, signOut,
-    doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, limit
+    doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit
   };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
@@ -1531,19 +1531,24 @@ let arFlt     = false; // filtro alto riesgo
 let editingId = null;
 let curTab    = 'imp';
 
-// ── Datos "por dispositivo" — quedan en localStorage a propósito (no se comparten) ──
-function saveLastLoteVenc(magId, lote, venc) {
+// ── Último lote usado para un magistral puntual, según el Historial real (Firestore,
+// compartido entre todos los usuarios). Solo se usa para precargar el campo "lote" al
+// seleccionar un magistral; los fraccionados nunca traen lote por defecto.
+async function getUltimoLoteMagistral(magId) {
   try {
-    const all = JSON.parse(localStorage.getItem('farmacia-last-lv') || '{}');
-    all[magId] = { lote, venc, ts: Date.now() };
-    localStorage.setItem('farmacia-last-lv', JSON.stringify(all));
-  } catch(e) {}
-}
-function loadLastLoteVenc(magId) {
-  try {
-    const all = JSON.parse(localStorage.getItem('farmacia-last-lv') || '{}');
-    return all[magId] || null;
-  } catch(e) { return null; }
+    const fb = await waitFb();
+    const q = fb.query(fb.collection(fb.db, 'historial'), fb.where('magId', '==', magId));
+    const snap = await fb.getDocs(q);
+    let ultimo = null;
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.lote && (!ultimo || (data.fechaTs||0) > (ultimo.fechaTs||0))) ultimo = data;
+    });
+    return ultimo ? ultimo.lote : '';
+  } catch(e) {
+    console.error('Error buscando último lote en historial:', e);
+    return '';
+  }
 }
 
 // ── Preparados (mags) — colección "preparados" en Firestore ──
@@ -1813,6 +1818,17 @@ function setTipo(el) {
 
 let _filterTimer = null;
 function filterListDebounced() {
+  // En mobile, apenas se empieza a escribir se despliega la lista automáticamente
+  // (antes había que tocar "Cambiar preparado" primero, lo cual era poco intuitivo).
+  if (esMobile()) {
+    const srchEl = document.getElementById('srch');
+    const panel  = document.getElementById('imp-list-panel');
+    const btn    = document.getElementById('imp-list-toggle-btn');
+    if (srchEl && srchEl.value && panel && !panel.classList.contains('imp-list-open')) {
+      panel.classList.add('imp-list-open');
+      if (btn) btn.textContent = 'Ocultar lista ▴';
+    }
+  }
   clearTimeout(_filterTimer);
   _filterTimer = setTimeout(filterList, 150);
 }
@@ -4903,7 +4919,6 @@ function calcVencImp() {
   if (vencDate) {
     const fVenc = fmtDate(vencDate);
     vEl.value = fVenc;
-    localStorage.setItem('farmacia-last-venc', fVenc);
     updPrint();
   }
 }
@@ -5483,7 +5498,7 @@ function renderImpPanel() {
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;">
             <div class="grid2" style="margin-bottom:12px;">
-              <div class="fg" style="margin:0;"><label>Número de lote</label><input type="text" id="f-lote" placeholder="Ej: L2024-01" value="${loadLastLoteVenc(sel.id)?.lote || localStorage.getItem('farmacia-last-lote')||''}" oninput="updPrint()"></div>
+              <div class="fg" style="margin:0;"><label>Número de lote</label><input type="text" id="f-lote" placeholder="Ej: L2024-01" value="" oninput="updPrint()"></div>
               <div class="fg" style="margin:0;"><label>Fecha de elaboración</label><input type="date" id="f-elab" style="font-size:13px;" value="${fechaHoy()}" oninput="calcVencImp()"></div>
             </div>
             ${sel.tipo === 'Magistral' ? `
@@ -5512,7 +5527,7 @@ function renderImpPanel() {
                   ${ criterioVencAbbr(sel.criterioVenc) }
                 </span>
               </label>
-              <input type="text" id="f-venc" placeholder="DD/MM/AAAA" value="${loadLastLoteVenc(sel.id)?.venc || localStorage.getItem('farmacia-last-venc')||''}" oninput="updPrint()" style="font-size:13px;font-weight:500;">
+              <input type="text" id="f-venc" placeholder="DD/MM/AAAA" value="" oninput="updPrint()" style="font-size:13px;font-weight:500;">
               ${ (sel.criterioVenc==='25pct'||sel.criterioVenc==='menor') ? `
               <div style="margin-top:6px;">
                 <label style="font-size:10px;color:var(--text3);">Fecha venc. caja madre <span style="font-size:9px;">(para calcular el 25%)</span></label>
@@ -5595,6 +5610,20 @@ function renderImpPanel() {
   updPrint();
   const criterio = sel?.criterioVenc || 'manual';
   if (criterio !== 'manual') setTimeout(calcVencImp, 50);
+
+  // Precargar el último lote usado (solo para magistrales) — el vencimiento nunca
+  // se trae del historial porque siempre lo calcula la app.
+  if (sel.tipo === 'Magistral') {
+    const magIdAlPedir = sel.id;
+    getUltimoLoteMagistral(magIdAlPedir).then(lote => {
+      const loteEl = document.getElementById('f-lote');
+      // Solo completar si seguimos en el mismo preparado y el usuario no tipeó nada
+      if (lote && loteEl && sel?.id === magIdAlPedir && !loteEl.value) {
+        loteEl.value = lote;
+        updPrint();
+      }
+    });
+  }
 }
 
 function editDesdeImp() {
@@ -5753,10 +5782,6 @@ async function enviarAColaRemota() {
   const printAltoRiesgo = sel.altoRiesgo && (arToggle ? arToggle.checked : true);
   const fechaElab = document.getElementById('f-elab')?.value || '';
 
-  if (lotVal) localStorage.setItem('farmacia-last-lote', lotVal);
-  if (vncVal) localStorage.setItem('farmacia-last-venc', vncVal);
-  if (sel?.id && lotVal) saveLastLoteVenc(sel.id, lotVal, vncVal);
-
   const btn = document.getElementById('btn-do-print');
   const btnOriginal = btn.innerHTML;
   btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;margin-right:6px;">⟳</span> Enviando a la impresora del trabajo...';
@@ -5860,10 +5885,6 @@ function generarPdfLocal() {
   const unidadEfectiva = sel.cantidad ? (sel.unidad||'mL') : volVarUnidadImp;
   const arToggle = document.getElementById('f-print-ar');
   const printAltoRiesgo = sel.altoRiesgo && (arToggle ? arToggle.checked : true);
-
-  if (lotVal) localStorage.setItem('farmacia-last-lote', lotVal);
-  if (vncVal) localStorage.setItem('farmacia-last-venc', vncVal);
-  if (sel?.id && lotVal) saveLastLoteVenc(sel.id, lotVal, vncVal);
 
   const btn = document.getElementById('btn-do-print');
   btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;margin-right:6px;">⟳</span> Generando PDF...';
