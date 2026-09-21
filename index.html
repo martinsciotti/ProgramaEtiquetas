@@ -1531,23 +1531,84 @@ let arFlt     = false; // filtro alto riesgo
 let editingId = null;
 let curTab    = 'imp';
 
-// ── Último lote usado para un magistral puntual, según el Historial real (Firestore,
-// compartido entre todos los usuarios). Solo se usa para precargar el campo "lote" al
-// seleccionar un magistral; los fraccionados nunca traen lote por defecto.
-async function getUltimoLoteMagistral(magId) {
+// ── Generación automática de número de lote para magistrales ──
+// Criterio: [3 letras del magistral][fecha hoy AAMMDD]-[siguiente número secuencial
+// según el último lote registrado en el Historial para ese magistral].
+// Los dos jarabes especiales (jarabe simple y triple jarabe) no llevan prefijo ni
+// secuencial: el lote por defecto es solo la fecha de hoy en AAMMDD.
+function normalizarTexto(s) {
+  return (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+const PREFIJOS_LOTE_MAGISTRAL = {
+  'acido ursodesoxicolico': 'AUR',
+  'clonidina':               'CLO',
+  'enalapril':                'ENA',
+  'espironolactona':          'ESP',
+  'fenobarbital':             'FEN',
+  'furosemida':               'FUR',
+  'metadona':                 'MET',
+  'oseltamivir':              'OSE',
+  'sildenafil':                'SIL',
+  'vancomicina':              'VAN',
+};
+
+const MAGISTRALES_LOTE_SOLO_FECHA = ['jarabe simple', 'triple jarabe'];
+
+function fechaLoteHoy() {
+  const d = new Date();
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return yy + mm + dd;
+}
+
+// Devuelve { prefijo, soloFecha } según el magistral seleccionado.
+// prefijo === '' cuando el magistral no está en la lista de prefijos conocidos.
+function infoPrefijoLoteMagistral(sel) {
+  if (!sel) return { prefijo: '', soloFecha: false };
+  const norm = normalizarTexto(sel.droga || sel.nombre || '');
+  if (MAGISTRALES_LOTE_SOLO_FECHA.some(k => norm.includes(k))) return { prefijo: '', soloFecha: true };
+  for (const key in PREFIJOS_LOTE_MAGISTRAL) {
+    if (norm.includes(key)) return { prefijo: PREFIJOS_LOTE_MAGISTRAL[key], soloFecha: false };
+  }
+  return { prefijo: '', soloFecha: false };
+}
+
+// Texto de ayuda (placeholder gris) con el formato de lote esperado para este magistral.
+function formatoLoteHint(sel) {
+  if (!sel || sel.tipo !== 'Magistral') return '';
+  const { prefijo, soloFecha } = infoPrefijoLoteMagistral(sel);
+  if (soloFecha) return 'Formato: AAMMDD';
+  return `Formato: [${prefijo || 'XXX'}]AAMMDD-#`;
+}
+
+// Busca en el Historial (Firestore, compartido entre todos los usuarios) el último
+// lote registrado para este magistral y arma el siguiente lote sugerido.
+async function getSiguienteLoteMagistral(sel) {
+  if (!sel || sel.tipo !== 'Magistral') return '';
+  const { prefijo, soloFecha } = infoPrefijoLoteMagistral(sel);
+  const fecha = fechaLoteHoy();
+  if (soloFecha) return fecha;
+  if (!prefijo) return ''; // magistral no reconocido: no autocompletar
+
+  const base = prefijo + fecha;
   try {
     const fb = await waitFb();
-    const q = fb.query(fb.collection(fb.db, 'historial'), fb.where('magId', '==', magId));
+    const q = fb.query(fb.collection(fb.db, 'historial'), fb.where('magId', '==', sel.id));
     const snap = await fb.getDocs(q);
     let ultimo = null;
     snap.forEach(d => {
       const data = d.data();
       if (data.lote && (!ultimo || (data.fechaTs||0) > (ultimo.fechaTs||0))) ultimo = data;
     });
-    return ultimo ? ultimo.lote : '';
-  } catch(e) {
-    console.error('Error buscando último lote en historial:', e);
-    return '';
+    if (!ultimo) return base + '-1';
+    const m = /-(\d+)\s*$/.exec((ultimo.lote || '').trim());
+    if (!m) return base + '-'; // el último lote no tiene el formato esperado: dejar el número en blanco
+    return base + '-' + (parseInt(m[1], 10) + 1);
+  } catch (e) {
+    console.error('Error calculando siguiente lote:', e);
+    return base + '-';
   }
 }
 
@@ -5498,7 +5559,10 @@ function renderImpPanel() {
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;">
             <div class="grid2" style="margin-bottom:12px;">
-              <div class="fg" style="margin:0;"><label>Número de lote</label><input type="text" id="f-lote" placeholder="Ej: L2024-01" value="" oninput="updPrint()"></div>
+              <div class="fg" style="margin:0;">
+                <label>Número de lote ${sel.tipo === 'Magistral' ? `<span id="f-lote-fmt" style="font-size:9px;color:var(--text3);font-weight:400;">${esc(formatoLoteHint(sel))}</span>` : ''}</label>
+                <input type="text" id="f-lote" placeholder="Ej: L2024-01" value="" oninput="this.value=this.value.toUpperCase();updPrint()">
+              </div>
               <div class="fg" style="margin:0;"><label>Fecha de elaboración</label><input type="date" id="f-elab" style="font-size:13px;" value="${fechaHoy()}" oninput="calcVencImp()"></div>
             </div>
             ${sel.tipo === 'Magistral' ? `
@@ -5538,7 +5602,7 @@ function renderImpPanel() {
             </div>
             <div class="fg" style="margin:0;">
               <label>Paciente / Servicio <span style="font-size:9px;color:var(--text3);font-weight:400;">(opcional)</span></label>
-              <input type="text" id="f-pac" placeholder="Apellido, Nombre o Servicio" oninput="updPrint()">
+              <input type="text" id="f-pac" placeholder="Apellido, Nombre o Servicio" oninput="this.value=this.value.toUpperCase();updPrint()">
             </div>
           </div>
 
@@ -5611,15 +5675,15 @@ function renderImpPanel() {
   const criterio = sel?.criterioVenc || 'manual';
   if (criterio !== 'manual') setTimeout(calcVencImp, 50);
 
-  // Precargar el último lote usado (solo para magistrales) — el vencimiento nunca
+  // Precargar el lote sugerido (solo para magistrales) — el vencimiento nunca
   // se trae del historial porque siempre lo calcula la app.
   if (sel.tipo === 'Magistral') {
     const magIdAlPedir = sel.id;
-    getUltimoLoteMagistral(magIdAlPedir).then(lote => {
+    getSiguienteLoteMagistral(sel).then(lote => {
       const loteEl = document.getElementById('f-lote');
       // Solo completar si seguimos en el mismo preparado y el usuario no tipeó nada
       if (lote && loteEl && sel?.id === magIdAlPedir && !loteEl.value) {
-        loteEl.value = lote;
+        loteEl.value = lote.toUpperCase();
         updPrint();
       }
     });
