@@ -898,7 +898,7 @@ function fechaHoy() {
 // Abreviatura del criterio de vencimiento — usada en el badge de Imprimir y en el Historial
 const CRITERIO_VENC_ABBR = {
   'manual':'MANUAL', 'estabilidad':'AUTO ESTAB', '6meses':'AUTO 6M',
-  '25pct':'AUTO 25%', 'menor':'AUTO MIN 25%/6M'
+  '25pct':'AUTO 25%', 'menor':'AUTO MIN 6M/VTO MADRE'
 };
 function criterioVencAbbr(criterio) {
   return CRITERIO_VENC_ABBR[criterio || 'manual'] || 'AUTO';
@@ -4896,7 +4896,7 @@ function updCriterioVencHint(val) {
     estabilidad: 'Calcula la fecha sumando los días de estabilidad a la fecha de elaboración.',
     '6meses':    'Calcula 180 días desde la fecha de elaboración.',
     '25pct':     'Ingresás la fecha de vencimiento de la caja madre y calcula el 25% del tiempo restante.',
-    menor:       'Calcula ambos (6 meses y 25% caja madre) y usa el que dé la fecha más próxima.',
+    menor:       'Ingresás la fecha de vencimiento de la caja madre y usa la menor entre esa fecha y 6 meses desde la elaboración.',
   };
   el.textContent = hints[val] || '';
 }
@@ -4932,11 +4932,7 @@ function calcVencImp() {
     vencDate = new Date(elab);
     vencDate.setDate(vencDate.getDate() + 179); // 180 días - 1 para retirar antes
 
-  } else if (criterio === '25pct' || criterio === 'menor') {
-    // 6 meses
-    const venc6m = new Date(elab);
-    venc6m.setDate(venc6m.getDate() + 179); // 180 días - 1 para retirar antes
-
+  } else if (criterio === '25pct') {
     // 25% caja madre
     let venc25 = null;
     if (cajaMadreStr) {
@@ -4951,29 +4947,37 @@ function calcVencImp() {
           venc25.setDate(venc25.getDate() + Math.max(0, Math.floor(diasRestantes * 0.25) - 1)); // -1 para retirar antes
           // Show breakdown
           const infoEl = document.getElementById('venc-criterio-info');
-          if (infoEl && criterio === '25pct') {
+          if (infoEl) {
             infoEl.textContent = `Caja madre vence en ${diasRestantes} días → 25% = ${Math.floor(diasRestantes*0.25)} días`;
           }
         }
       }
     }
 
-    if (criterio === '25pct') {
-      vencDate = venc25;
-    } else { // menor
-      if (venc25) {
-        vencDate = venc25 < venc6m ? venc25 : venc6m;
-        // Show info
-        const infoEl = document.getElementById('venc-criterio-info');
-        if (infoEl) {
-          const d6  = Math.floor((venc6m  - elab) / 86400000);
-          const d25 = Math.floor((venc25  - elab) / 86400000);
-          const ganador = d25 < d6 ? '25% caja madre' : '6 meses';
-          infoEl.textContent = `6 meses: ${fmtDate(venc6m)} (${d6}d) · 25%: ${fmtDate(venc25)} (${d25}d) → usa ${ganador}`;
-        }
-      } else {
-        vencDate = venc6m; // fallback sin caja madre
+    vencDate = venc25;
+  } else if (criterio === 'menor') {
+    // Menor entre 6 meses desde elaboración y la fecha de vencimiento de la caja madre
+    const venc6m = new Date(elab);
+    venc6m.setDate(venc6m.getDate() + 179); // 180 días - 1 para retirar antes
+
+    let vencCM = null;
+    if (cajaMadreStr) {
+      // f-caja-madre es type="date" → valor en YYYY-MM-DD
+      const cm = cajaMadreStr.includes('-')
+        ? new Date(cajaMadreStr + 'T12:00:00')
+        : parseFechaAR(cajaMadreStr);
+      if (cm && !isNaN(cm.getTime())) vencCM = cm;
+    }
+
+    if (vencCM) {
+      vencDate = vencCM < venc6m ? vencCM : venc6m;
+      const infoEl = document.getElementById('venc-criterio-info');
+      if (infoEl) {
+        const ganador = vencCM < venc6m ? 'caja madre' : '6 meses';
+        infoEl.textContent = `6 meses: ${fmtDate(venc6m)} · Caja madre: ${fmtDate(vencCM)} → usa ${ganador}`;
       }
+    } else {
+      vencDate = venc6m; // fallback sin caja madre
     }
   }
 
@@ -5547,7 +5551,7 @@ function renderImpPanel() {
                   sel.criterioVenc === 'estabilidad' ? 'Por estabilidad' :
                   sel.criterioVenc === '6meses' ? '6 meses' :
                   sel.criterioVenc === '25pct' ? '25% caja madre' :
-                  sel.criterioVenc === 'menor' ? 'Menor automático' : sel.criterioVenc
+                  sel.criterioVenc === 'menor' ? 'Menor entre 6 meses y caja madre' : sel.criterioVenc
                 }</span>` : ''}
               </div>` : ''}
             </div>
@@ -5594,7 +5598,7 @@ function renderImpPanel() {
               <input type="text" id="f-venc" placeholder="DD/MM/AAAA" value="" oninput="updPrint()" style="font-size:13px;font-weight:500;">
               ${ (sel.criterioVenc==='25pct'||sel.criterioVenc==='menor') ? `
               <div style="margin-top:6px;">
-                <label style="font-size:10px;color:var(--text3);">Fecha venc. caja madre <span style="font-size:9px;">(para calcular el 25%)</span></label>
+                <label style="font-size:10px;color:var(--text3);">Fecha venc. caja madre ${sel.criterioVenc==='25pct' ? '<span style="font-size:9px;">(para calcular el 25%)</span>' : ''}</label>
                 <input type="date" id="f-caja-madre" oninput="calcVencImp()"
                   style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:var(--font);margin-top:2px;">
                 <div id="venc-criterio-info" style="font-size:9px;color:var(--teal-dk);margin-top:3px;"></div>
@@ -6334,7 +6338,7 @@ function _renderFormInto(container, data) {
         <option value="estabilidad" ${v.criterioVenc==='estabilidad'           ?'selected':''}>Estabilidad — días desde elaboración</option>
         <option value="6meses"     ${v.criterioVenc==='6meses'                ?'selected':''}>6 meses desde elaboración</option>
         <option value="25pct"      ${v.criterioVenc==='25pct'                 ?'selected':''}>25% del tiempo restante (caja madre)</option>
-        <option value="menor"      ${v.criterioVenc==='menor'                 ?'selected':''}>Automático — el menor entre 6 meses y 25%</option>
+        <option value="menor"      ${v.criterioVenc==='menor'                 ?'selected':''}>Automático — el menor entre 6 meses y caja madre</option>
       </select>
       <div id="criterio-venc-hint" style="font-size:10px;color:var(--text3);margin-top:4px;"></div>
     </div>
