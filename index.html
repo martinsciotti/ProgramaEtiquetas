@@ -898,8 +898,13 @@ function fechaHoy() {
 // Abreviatura del criterio de vencimiento — usada en el badge de Imprimir y en el Historial
 const CRITERIO_VENC_ABBR = {
   'manual':'MANUAL', 'estabilidad':'AUTO ESTAB', '6meses':'AUTO 6M',
-  '25pct':'AUTO 25%', 'menor':'AUTO MIN 6M/VTO MADRE'
+  'menor':'AUTO MIN 6M/VTO MADRE'
 };
+// El criterio '25pct' fue eliminado: los preparados que lo tenían pasan a 'menor'
+function migrarCriterio25(arr) {
+  (arr || []).forEach(m => { if (m && m.criterioVenc === '25pct') m.criterioVenc = 'menor'; });
+  return arr;
+}
 function criterioVencAbbr(criterio) {
   return CRITERIO_VENC_ABBR[criterio || 'manual'] || 'AUTO';
 }
@@ -1183,7 +1188,7 @@ function importarBackupJSON() {
       let resumen = '';
 
       if (opcion === 'completa') {
-        mags = data.preparados;
+        mags = migrarCriterio25(data.preparados);
         mags.forEach((m, i) => { m.id = i + 1; });
         if (data.perfiles) savePerfiles(data.perfiles);
         if (data.troquelados) { saveTroquelados(data.troquelados); reloadSZ(); }
@@ -1192,14 +1197,14 @@ function importarBackupJSON() {
 
       } else if (opcion === 'agregar') {
         const nombresExistentes = new Set(mags.map(m => m.nombre.toLowerCase()));
-        const nuevosPreps = data.preparados.filter(m => !nombresExistentes.has(m.nombre.toLowerCase()));
+        const nuevosPreps = migrarCriterio25(data.preparados).filter(m => !nombresExistentes.has(m.nombre.toLowerCase()));
         let maxId = mags.length ? Math.max(...mags.map(m => m.id)) : 0;
         nuevosPreps.forEach(m => { m.id = ++maxId; });
         mags = [...mags, ...nuevosPreps];
         resumen = `${nuevosPreps.length} preparado(s) nuevo(s) agregado(s) · los existentes no fueron modificados`;
 
       } else if (opcion === 'reemplazar') {
-        mags = data.preparados;
+        mags = migrarCriterio25(data.preparados);
         mags.forEach((m, i) => { m.id = i + 1; });
         resumen = `${n} preparados reemplazados · perfiles y configuración sin cambios`;
 
@@ -1621,7 +1626,7 @@ async function load() {
       mags = DEMO;
       await _seedPreparados();
     } else {
-      mags = snap.docs.map(d => d.data());
+      mags = migrarCriterio25(snap.docs.map(d => d.data()));
     }
     _lastSyncedIds = new Set(mags.map(m => String(m.id)));
   } catch(e) {
@@ -4895,7 +4900,6 @@ function updCriterioVencHint(val) {
     manual:      'Ingresás la fecha de vencimiento manualmente al imprimir.',
     estabilidad: 'Calcula la fecha sumando los días de estabilidad a la fecha de elaboración.',
     '6meses':    'Calcula 180 días desde la fecha de elaboración.',
-    '25pct':     'Ingresás la fecha de vencimiento de la caja madre y calcula el 25% del tiempo restante.',
     menor:       'Ingresás la fecha de vencimiento de la caja madre y usa la menor entre esa fecha y 6 meses desde la elaboración.',
   };
   el.textContent = hints[val] || '';
@@ -4932,29 +4936,6 @@ function calcVencImp() {
     vencDate = new Date(elab);
     vencDate.setDate(vencDate.getDate() + 179); // 180 días - 1 para retirar antes
 
-  } else if (criterio === '25pct') {
-    // 25% caja madre
-    let venc25 = null;
-    if (cajaMadreStr) {
-      // f-caja-madre es type="date" → valor en YYYY-MM-DD
-      const cm = cajaMadreStr.includes('-')
-        ? new Date(cajaMadreStr + 'T12:00:00')
-        : parseFechaAR(cajaMadreStr);
-      if (cm && !isNaN(cm.getTime())) {
-        const diasRestantes = Math.floor((cm - elab) / 86400000);
-        if (diasRestantes > 0) {
-          venc25 = new Date(elab);
-          venc25.setDate(venc25.getDate() + Math.max(0, Math.floor(diasRestantes * 0.25) - 1)); // -1 para retirar antes
-          // Show breakdown
-          const infoEl = document.getElementById('venc-criterio-info');
-          if (infoEl) {
-            infoEl.textContent = `Caja madre vence en ${diasRestantes} días → 25% = ${Math.floor(diasRestantes*0.25)} días`;
-          }
-        }
-      }
-    }
-
-    vencDate = venc25;
   } else if (criterio === 'menor') {
     // Menor entre 6 meses desde elaboración y la fecha de vencimiento de la caja madre
     const venc6m = new Date(elab);
@@ -5550,7 +5531,6 @@ function renderImpPanel() {
                 ${sel.criterioVenc && sel.criterioVenc !== 'manual' ? `<span style="background:var(--bg);color:var(--text3);padding:3px 8px;border-radius:4px;font-size:10px;border:1px solid var(--border);">Venc. automático · ${
                   sel.criterioVenc === 'estabilidad' ? 'Por estabilidad' :
                   sel.criterioVenc === '6meses' ? '6 meses' :
-                  sel.criterioVenc === '25pct' ? '25% caja madre' :
                   sel.criterioVenc === 'menor' ? 'Menor entre 6 meses y caja madre' : sel.criterioVenc
                 }</span>` : ''}
               </div>` : ''}
@@ -5596,9 +5576,9 @@ function renderImpPanel() {
                 </span>
               </label>
               <input type="text" id="f-venc" placeholder="DD/MM/AAAA" value="" oninput="updPrint()" style="font-size:13px;font-weight:500;">
-              ${ (sel.criterioVenc==='25pct'||sel.criterioVenc==='menor') ? `
+              ${ sel.criterioVenc==='menor' ? `
               <div style="margin-top:6px;">
-                <label style="font-size:10px;color:var(--text3);">Fecha venc. caja madre ${sel.criterioVenc==='25pct' ? '<span style="font-size:9px;">(para calcular el 25%)</span>' : ''}</label>
+                <label style="font-size:10px;color:var(--text3);">Fecha venc. caja madre</label>
                 <input type="date" id="f-caja-madre" oninput="calcVencImp()"
                   style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:var(--font);margin-top:2px;">
                 <div id="venc-criterio-info" style="font-size:9px;color:var(--teal-dk);margin-top:3px;"></div>
@@ -6337,7 +6317,6 @@ function _renderFormInto(container, data) {
         <option value="manual"     ${(v.criterioVenc||'manual')==='manual'    ?'selected':''}>Manual — ingreso la fecha al imprimir</option>
         <option value="estabilidad" ${v.criterioVenc==='estabilidad'           ?'selected':''}>Estabilidad — días desde elaboración</option>
         <option value="6meses"     ${v.criterioVenc==='6meses'                ?'selected':''}>6 meses desde elaboración</option>
-        <option value="25pct"      ${v.criterioVenc==='25pct'                 ?'selected':''}>25% del tiempo restante (caja madre)</option>
         <option value="menor"      ${v.criterioVenc==='menor'                 ?'selected':''}>Automático — el menor entre 6 meses y caja madre</option>
       </select>
       <div id="criterio-venc-hint" style="font-size:10px;color:var(--text3);margin-top:4px;"></div>
